@@ -65,12 +65,7 @@ def propose_candidate(seed=42, budget_s={num_seconds}, **kwargs):
     np.random.seed(seed)
     deadline = time.time() + budget_s - 10
 
-    if np.random.rand() < 0.5:
-        # Start from the SOTA sequence (already available as height_sequence_1)
-        best_sequence = list(height_sequence_1)
-    else:
-        # Start from random initialization, could help if height_sequence_1 is a local minimum
-        best_sequence = [np.random.random()] * np.random.randint(100, 1000)
+    best_sequence = [np.random.random()] * np.random.randint(100, 1000)
     curr_sequence = best_sequence.copy()
     best_score = evaluate_sequence(best_sequence)
 
@@ -167,7 +162,6 @@ def build_ac1_state_context(
     state: ArchiveNode,
     *,
     code: str,
-    construction: list[float] | None,
 ) -> str:
     value_ctx = f"You are iteratively optimizing {AC1_METRIC_NAME}."
     improvement_direction = "higher" if AC1_IS_MAXIMIZE else "lower"
@@ -179,22 +173,10 @@ def build_ac1_state_context(
     else:
         value_ctx += "\nNo previous code available."
 
-    if state.parent_values and state.value is not None and construction:
-        before_value = state.parent_values[0] if AC1_IS_MAXIMIZE else -state.parent_values[0]
-        after_value = state.value if AC1_IS_MAXIMIZE else -state.value
-        current_gap = AC1_TARGET - after_value if AC1_IS_MAXIMIZE else after_value - AC1_TARGET
-        value_ctx += (
-            f"\nHere is the {AC1_METRIC_NAME} before and after running the code above "
-            f"({improvement_direction} is better): {before_value:.6f} -> {after_value:.6f}"
-        )
-        value_ctx += (
-            f"\nTarget: {AC1_TARGET}. Current gap: {current_gap:.6f}. "
-            "Further improvements will also be generously rewarded."
-        )
-    elif state.value is not None:
-        after_value = state.value if AC1_IS_MAXIMIZE else -state.value
-        current_gap = AC1_TARGET - after_value if AC1_IS_MAXIMIZE else after_value - AC1_TARGET
-        value_ctx += f"\nCurrent {AC1_METRIC_NAME} ({improvement_direction} is better): {after_value:.6f}"
+    if state.value is not None:
+        current_value = state.value if AC1_IS_MAXIMIZE else -state.value
+        current_gap = AC1_TARGET - current_value if AC1_IS_MAXIMIZE else current_value - AC1_TARGET
+        value_ctx += f"\nCurrent best {AC1_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         value_ctx += (
             f"\nTarget: {AC1_TARGET}. Current gap: {current_gap:.6f}. "
             "Further improvements will also be generously rewarded."
@@ -208,8 +190,6 @@ def build_ac1_state_context(
             stdout = "\n\n\t\t ...(TRUNCATED)...\n" + stdout[-500:]
         value_ctx += f"\n\n--- Previous Program Output ---\n{stdout}\n--- End Output ---"
 
-    if construction:
-        value_ctx += f"\nLength of the construction: {len(construction)}"
     return value_ctx
 
 
@@ -231,9 +211,6 @@ Your task is to write a search function that searches for the best sequence of c
 You may code up any search method you want, and you are allowed to call the evaluate_sequence() function as many times as you want. You have access to it, you don't need to code up the evaluate_sequence() function.
 
 {state_ctx}
-
-You may want to start your search from one of the constructions we have found so far, which you can access through the 'height_sequence_1' global variable. 
-However, you are encouraged to explore solutions that use other starting points to prevent getting stuck in a local minimum.
 
 Reason about how you could further improve this construction.
 Ideally, try to do something different than the above algorithm. Could be using different algorithmic ideas, adjusting your heuristics, adjusting / sweeping your hyperparemeters, etc. 

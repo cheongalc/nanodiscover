@@ -1,5 +1,16 @@
 # Known Differences from TTT-Discover
 
+## Strict Mode (`strict` branch)
+
+The `strict` branch removes parent construction passdown entirely from `ac1`, `ac2`, and `erdos`. In TTT-Discover's non-strict setting, the parent solution's mathematical construction is injected into the child's execution namespace (as `height_sequence_1` for ac1/ac2, and `initial_h_values` for erdos), allowing the child to start its search from the parent's known-good construction. In strict mode:
+
+- `height_sequence_1` is not injected into the ac1/ac2 execution namespace.
+- `initial_h_values` is not injected into the erdos execution namespace.
+- The starter code templates start from random initialization instead.
+- The prompts do not mention these variables or suggest starting from the parent construction.
+
+The child must produce a construction entirely from scratch. This is a stricter notion of discovery. Circle packing is unaffected because it never had construction passdown.
+
 ## AC1 Prompt Text
 
 `nanodiscover` intentionally differs from the released AC1 prompt in the current-value wording for seed/no-parent states:

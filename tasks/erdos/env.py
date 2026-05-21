@@ -45,16 +45,10 @@ class ErdosTask:
         )
 
     def render_prompt(self, state: ArchiveNode) -> str:
-        construction = list(state.task_payload.get("construction") or [])
         code = str(state.task_payload.get("code") or "")
-        state_ctx = build_erdos_state_context(
-            state,
-            code=code,
-            construction=construction,
-        )
+        state_ctx = build_erdos_state_context(state, code=code)
         return render_erdos_prompt(
             state_ctx=state_ctx,
-            construction=construction,
             code=code,
             budget_s=ERDOS_BUDGET_SECONDS,
         )
@@ -87,7 +81,6 @@ class ErdosTask:
             }
         return evaluate_candidate_code(
             code=parsed_code,
-            parent_construction=list(state.task_payload.get("construction") or []),
             timeout_s=ERDOS_EVAL_TIMEOUT_SECONDS,
             budget_s=ERDOS_BUDGET_SECONDS,
             seed=seed,

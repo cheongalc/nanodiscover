@@ -21,7 +21,6 @@ def build_erdos_state_context(
     state: ArchiveNode,
     *,
     code: str,
-    construction: list[float] | None,
 ) -> str:
     value_ctx = f"You are iteratively optimizing {ERDOS_METRIC_NAME}."
     improvement_direction = "higher" if ERDOS_IS_MAXIMIZE else "lower"
@@ -33,22 +32,10 @@ def build_erdos_state_context(
     else:
         value_ctx += "\nNo previous code available."
 
-    if state.parent_values and state.value is not None and construction:
-        before_value = state.parent_values[0] if ERDOS_IS_MAXIMIZE else -state.parent_values[0]
-        after_value = state.value if ERDOS_IS_MAXIMIZE else -state.value
-        current_gap = ERDOS_TARGET - after_value if ERDOS_IS_MAXIMIZE else after_value - ERDOS_TARGET
-        value_ctx += (
-            f"\nHere is the {ERDOS_METRIC_NAME} before and after running the code above "
-            f"({improvement_direction} is better): {before_value:.6f} -> {after_value:.6f}"
-        )
-        value_ctx += (
-            f"\nTarget: {ERDOS_TARGET}. Current gap: {current_gap:.6f}. "
-            "Further improvements will also be generously rewarded."
-        )
-    elif state.value is not None:
-        after_value = state.value if ERDOS_IS_MAXIMIZE else -state.value
-        current_gap = ERDOS_TARGET - after_value if ERDOS_IS_MAXIMIZE else after_value - ERDOS_TARGET
-        value_ctx += f"\nCurrent {ERDOS_METRIC_NAME} ({improvement_direction} is better): {after_value:.6f}"
+    if state.value is not None:
+        current_value = state.value if ERDOS_IS_MAXIMIZE else -state.value
+        current_gap = ERDOS_TARGET - current_value if ERDOS_IS_MAXIMIZE else current_value - ERDOS_TARGET
+        value_ctx += f"\nCurrent best {ERDOS_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         value_ctx += (
             f"\nTarget: {ERDOS_TARGET}. Current gap: {current_gap:.6f}. "
             "Further improvements will also be generously rewarded."
@@ -68,18 +55,9 @@ def build_erdos_state_context(
 def render_erdos_prompt(
     *,
     state_ctx: str,
-    construction: list[float] | None,
     code: str,
     budget_s: int,
 ) -> str:
-    # Construct construction section
-    construction_section = ""
-    if construction is not None and len(construction) > 0:
-        construction_section = f"""
-You may want to start your search from the current construction, which you can access through the `initial_h_values` global variable (n={len(construction)} samples).
-You are encouraged to explore solutions that use other starting points to prevent getting stuck in a local optimum.
-"""
-
     # Construct code section
     if code and code.strip():
         code_section = '''Reason about how you could further improve this construction.
@@ -121,12 +99,11 @@ Smaller sequences with less than 1k samples are preferred - they are faster to o
 - Use scipy, numpy, cvxpy[CBC,CVXOPT,GLOP,GLPK,GUROBI,MOSEK,PDLP,SCIP,XPRESS,ECOS], math
 - Make all helper functions top level, no closures or lambdas
 - No filesystem or network IO
-- `evaluate_erdos_solution()` and `initial_h_values` (an initial construction, if available) are pre-imported
+- `evaluate_erdos_solution()` is pre-imported
 - Your function must complete within budget_s seconds and return the best solution found
 
 **Lower is better**. Current record: C₅ ≤ 0.38092. Our goal is to find a construction that shows C₅ ≤ 0.38080.
 
 {state_ctx}
-{construction_section}
 {code_section}
 '''

@@ -48,13 +48,8 @@ class AC2Task:
         state.task_payload["construction"] = construction
 
     def render_prompt(self, state: ArchiveNode) -> str:
-        construction = list(state.task_payload.get("construction") or [])
         code = str(state.task_payload.get("code") or "")
-        state_ctx = build_ac2_state_context(
-            state,
-            code=code,
-            construction=construction,
-        )
+        state_ctx = build_ac2_state_context(state, code=code)
         return render_ac2_prompt(state_ctx=state_ctx, budget_s=AC2_BUDGET_SECONDS)
 
     def parse_code(self, response_text: str) -> str:
@@ -87,7 +82,6 @@ class AC2Task:
             }
         return evaluate_candidate_code(
             code=parsed_code,
-            parent_construction=list(state.task_payload.get("construction") or []),
             timeout_s=AC2_EVAL_TIMEOUT_SECONDS,
             budget_s=AC2_BUDGET_SECONDS,
             seed=seed,

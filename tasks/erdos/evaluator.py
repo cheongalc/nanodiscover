@@ -102,7 +102,6 @@ def apply_worker_resource_limits(cpu_ids: tuple[int, ...], thread_limit: int) ->
 
 def evaluate_candidate_in_worker(
     code: str,
-    parent_construction: list[float] | None,
     seed: int,
     result_conn: Connection,
     cpu_ids: tuple[int, ...],
@@ -128,14 +127,10 @@ def evaluate_candidate_in_worker(
             pass
 
     try:
-        # Build the preprocessed code: inject numpy, verifier, and initial_h_values
+        # Build the preprocessed code: inject numpy and verifier
         verifier_src = inspect.getsource(verify_c5_solution)
         numpy_import = "import numpy as np"
         base = numpy_import + "\n\n" + verifier_src + "\n\n"
-
-        if parent_construction is not None:
-            initial_h_values_line = f"initial_h_values = np.array({list(parent_construction)!r})"
-            base += initial_h_values_line + "\n\n"
 
         full_code = base + code
 
@@ -145,8 +140,6 @@ def evaluate_candidate_in_worker(
             "verify_c5_solution": verify_c5_solution,
             "evaluate_erdos_solution": evaluate_erdos_solution,
         }
-        if parent_construction is not None:
-            namespace["initial_h_values"] = np.array(parent_construction, dtype=float)
 
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             exec(full_code, namespace, namespace)
@@ -181,7 +174,6 @@ def evaluate_candidate_in_worker(
 
 def evaluate_candidate_code(
     code: str,
-    parent_construction: list[float] | None,
     timeout_s: int,
     budget_s: int,
     seed: int,
@@ -193,7 +185,7 @@ def evaluate_candidate_code(
     parent_conn, child_conn = ctx.Pipe(duplex=False)
     process = ctx.Process(
         target=evaluate_candidate_in_worker,
-        args=(code, parent_construction, seed, child_conn, cpu_ids, thread_limit),
+        args=(code, seed, child_conn, cpu_ids, thread_limit),
     )
     process.start()
     child_conn.close()

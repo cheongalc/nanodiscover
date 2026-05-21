@@ -107,7 +107,6 @@ def evaluate_sequence(sequence: list[float]) -> float:
 
 def evaluate_candidate_in_worker(
     code: str,
-    parent_construction: list[float] | None,
     seed: int,
     result_conn: Connection,
     cpu_ids: tuple[int, ...],
@@ -152,8 +151,6 @@ def evaluate_candidate_in_worker(
             "np": np,
             "evaluate_sequence": evaluate_sequence,
         }
-        if parent_construction is not None:
-            namespace["height_sequence_1"] = np.array(parent_construction, dtype=float)
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             exec(code, namespace, namespace)
             if "construct_function" not in namespace:
@@ -180,7 +177,6 @@ def evaluate_candidate_in_worker(
 
 def evaluate_candidate_code(
     code: str,
-    parent_construction: list[float] | None,
     timeout_s: int,
     budget_s: int,
     seed: int,
@@ -201,7 +197,7 @@ def evaluate_candidate_code(
     parent_conn, child_conn = ctx.Pipe(duplex=False)
     process = ctx.Process(
         target=evaluate_candidate_in_worker,
-        args=(code, parent_construction, seed, child_conn, cpu_ids, thread_limit),
+        args=(code, seed, child_conn, cpu_ids, thread_limit),
     )
     process.start()
     child_conn.close()

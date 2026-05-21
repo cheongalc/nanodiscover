@@ -246,16 +246,8 @@ def construct_function():
     ETA, GAMMA = 1e-3, 0.55  # gradient noise schedule (paper used ~0.65; 0.55 is slightly gentler)
     dtype = np.float32
 
-    h_prev_best = np.array(height_sequence_1, dtype=dtype)
-    h_prev_best = np.clip(h_prev_best, 0.0, None)
-
-    # resize if length doesn't match N
-    if h_prev_best.shape[0] != N:
-        x_old = np.linspace(-0.5, 0.5, h_prev_best.shape[0])
-        x_new = np.linspace(-0.5, 0.5, N)
-        h_prev_best = np.interp(x_new, x_old, h_prev_best).astype(dtype)
-
     rng = np.random.default_rng()
+    h_prev_best = rng.uniform(0.0, 1.0, size=N).astype(dtype)
 
     def init_sampler(m):
         out = rng.uniform(0.0, 1.0, size=(m, N)).astype(dtype)
@@ -399,7 +391,6 @@ def build_ac2_state_context(
     state: ArchiveNode,
     *,
     code: str,
-    construction: list[float] | None,
 ) -> str:
     """Build the state context string for AC2 prompts."""
     value_ctx = f"You are iteratively optimizing {AC2_METRIC_NAME}."
@@ -412,22 +403,10 @@ def build_ac2_state_context(
     else:
         value_ctx += "\nNo previous code available."
 
-    if state.parent_values and state.value is not None and construction:
-        before_value = state.parent_values[0] if AC2_IS_MAXIMIZE else -state.parent_values[0]
-        after_value = state.value if AC2_IS_MAXIMIZE else -state.value
-        current_gap = AC2_TARGET - after_value if AC2_IS_MAXIMIZE else after_value - AC2_TARGET
-        value_ctx += (
-            f"\nHere is the {AC2_METRIC_NAME} before and after running the code above "
-            f"({improvement_direction} is better): {before_value:.6f} -> {after_value:.6f}"
-        )
-        value_ctx += (
-            f"\nTarget: {AC2_TARGET}. Current gap: {current_gap:.6f}. "
-            "Further improvements will also be generously rewarded."
-        )
-    elif state.value is not None:
-        after_value = state.value if AC2_IS_MAXIMIZE else -state.value
-        current_gap = AC2_TARGET - after_value if AC2_IS_MAXIMIZE else after_value - AC2_TARGET
-        value_ctx += f"\nCurrent {AC2_METRIC_NAME} ({improvement_direction} is better): {after_value:.6f}"
+    if state.value is not None:
+        current_value = state.value if AC2_IS_MAXIMIZE else -state.value
+        current_gap = AC2_TARGET - current_value if AC2_IS_MAXIMIZE else current_value - AC2_TARGET
+        value_ctx += f"\nCurrent best {AC2_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         value_ctx += (
             f"\nTarget: {AC2_TARGET}. Current gap: {current_gap:.6f}. "
             "Further improvements will also be generously rewarded."
@@ -441,8 +420,6 @@ def build_ac2_state_context(
             stdout = "\n\n\t\t ...(TRUNCATED)...\n" + stdout[-500:]
         value_ctx += f"\n\n--- Previous Program Output ---\n{stdout}\n--- End Output ---"
 
-    if construction:
-        value_ctx += f"\nLength of the construction: {len(construction)}"
     return value_ctx
 
 
@@ -466,9 +443,6 @@ You may code up any search method you want, and you are allowed to call the eval
 
 {state_ctx}
 
-You may want to start your search from one of the constructions we have found so far, which you can access through the 'height_sequence_1' global variable.
-However, you are encouraged to explore solutions that use other starting points to prevent getting stuck in a local minimum.
-
 Reason about how you could further improve this construction.
 Ideally, try to do something different than the above algorithm. Could be using different algorithmic ideas, adjusting your heuristics, adjusting / sweeping your hyperparemeters, etc.
 Unless you make a meaningful improvement, you will not be rewarded, if you are stuck you should think about how to get unstuck.
@@ -479,7 +453,7 @@ Rules:
 - You can use up to 2 CPUs.
 - Make all helper functions top level and have no closures from function nesting. Don't use any lambda functions.
 - No filesystem or network IO.
-- Do not import evaluate_sequence yourself. Assume it will already be imported and can be directly invoked. Do not import height_sequence_1 yourself; it will already be available.
+- Do not import evaluate_sequence yourself. Assume it will already be imported and can be directly invoked.
 - **Print statements**: Use `print()` to log progress, intermediate bounds, timing info, etc. Your output will be shown back to you.
 - Include a short docstring at the top summarizing your algorithm.
 
