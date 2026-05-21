@@ -1,0 +1,17 @@
+# Python 3.11.14
+numpy==2.2.6
+scipy==1.15.3
+tqdm==4.67.1
+cvxpy==1.7.4
+clarabel==0.11.1
+cvxopt==1.3.2
+cylp==0.94.0
+ecos==2.0.14
+ortools==9.14.6206
+osqp==1.0.5
+pyscipopt==6.1.0
+scs==3.2.9
+gurobipy==13.0.0
+Mosek==11.0.30
+xpress==9.8.0
+xpresslibs==9.8.0
