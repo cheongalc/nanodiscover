@@ -21,9 +21,9 @@ More tasks are in progress.
 
 ## Modes
 
-**Non-strict mode (this branch, `main`):** This mode is designed to match TTT-Discover's behavior for the `ac1`, `ac2` and `erdos` tasks. The parent program's mathematical construction can be used directly by the child program.
+**Non-strict mode (`main`):** This mode is designed to match TTT-Discover's behavior for the `ac1`, `ac2` and `erdos` tasks. The parent program's mathematical construction can be used directly by the child program.
 
-**Strict mode (the `strict` branch):** In this mode, the child program must produce its construction from scratch, without inheriting the parent construction.
+**Strict mode (this branch, `strict`):** In this mode, the child program must produce its construction from scratch, without inheriting the parent construction.
 
 ## Results
 
