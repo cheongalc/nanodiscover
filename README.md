@@ -1,5 +1,7 @@
 # nanodiscover
 
+*built by [Alistair Cheong](https://github.com/cheongalc), [Zerui Chen](https://github.com/Zerui18)*
+
 `nanodiscover` is a reimplementation of [TTT-Discover](https://arxiv.org/abs/2601.16175) ([original code](https://github.com/test-time-training/discover)) that does not depend on the [Tinker API](https://thinkingmachines.ai/tinker/). It runs the same TTT-Discover-style automated discovery loop (sample parent solutions, generate children, evaluate, update the archive, train the proposer LLM via RL) while running on local GPUs.
 
 We built it to make TTT-Discover-style research easier to run, inspect, and extend.
