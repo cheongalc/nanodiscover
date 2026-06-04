@@ -33,6 +33,10 @@ Specific cleanup changes:
 - Released TTT-Discover can render `Current C5 bound (higher is better)` for seed/no-parent states even though Erdos minimizes the C5 bound. `nanodiscover` renders `lower is better`.
 - Released TTT-Discover says `2 CPUs available` while configuring the Erdos evaluator with one CPU per task. `nanodiscover` says `1 available` to match the actual evaluator resource envelope.
 
+## Erdos Evaluator Timeout
+
+The initial TTT-Discover release used a 530-second evaluator timeout for Erdos while the prompt tells the model it has a 1000-second budget. This was updated to 1100 seconds in [commit bf20511](https://github.com/test-time-training/discover/commit/bf205118d27fbb6b25be71ae16126aac581a61b5) (March 30, 2026). `nanodiscover` mirrors the 1100-second timeout to give the model sufficient time to use its full budget plus overhead.
+
 ## Erdos Evaluator Scoring
 
 The released TTT-Discover Erdos evaluator returns the model's self-reported C5 bound directly after verifying it passes a tolerance check (`atol=1e-4`). Because the tolerance is nonzero, a model can report an optimistically low C5 value that still passes verification, causing the archive and global-best tracker to record a score that is better than the true computed bound.

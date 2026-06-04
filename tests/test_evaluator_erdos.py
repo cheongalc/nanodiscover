@@ -238,8 +238,8 @@ def test_erdos_maximize_raw_score_is_false():
 # ---------------------------------------------------------------------------
 
 
-def test_erdos_eval_timeout_is_530():
-    assert ERDOS_EVAL_TIMEOUT_SECONDS == 530
+def test_erdos_eval_timeout_is_1100():
+    assert ERDOS_EVAL_TIMEOUT_SECONDS == 1100
 
 
 # ---------------------------------------------------------------------------

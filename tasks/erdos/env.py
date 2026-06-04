@@ -11,7 +11,7 @@ from tasks.erdos.evaluator import ERDOS_CPUS_PER_EVAL, evaluate_candidate_code
 
 
 ERDOS_BUDGET_SECONDS = 1000
-ERDOS_EVAL_TIMEOUT_SECONDS = 530
+ERDOS_EVAL_TIMEOUT_SECONDS = 1100
 MAX_CONSTRUCTION_LEN = 1000
 
 CODE_RE = re.compile(r"```python\s*\n(?!```)(.*?)(?:\n```)?(?=\n```|$)", re.DOTALL)
