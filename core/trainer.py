@@ -512,15 +512,25 @@ class ReferencePolicyLogprobScorer:
         if self.model is not None:
             return self.torch_module, self.model, self.device
         import torch
+        import time
         from transformers import AutoModelForCausalLM
 
         device = resolve_reference_policy_device(torch)
         dtype = torch.bfloat16 if device.type == "cuda" else torch.float32
-        model = AutoModelForCausalLM.from_pretrained(
-            self.model_name_or_path,
-            trust_remote_code=True,
-            dtype=dtype,
-        )
+        for attempt in range(5):
+            try:
+                model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name_or_path,
+                    trust_remote_code=True,
+                    dtype=dtype,
+                )
+                break
+            except Exception as e:
+                if attempt == 4:
+                    raise
+                wait = 2 ** attempt * 5
+                print(f"[ref-policy] model load failed (attempt {attempt + 1}/5): {e}. Retrying in {wait}s...")
+                time.sleep(wait)
         model.to(device)
         model.eval()
         self.torch_module = torch
@@ -1317,22 +1327,41 @@ class StageRunnerBase:
 
     def load_tokenizer_and_base_model(self, cfg: TrainerConfig, auto_tokenizer, auto_model_for_causal_lm) -> None:
         """Load the tokenizer and base causal LM for the stage runner."""
+        import time
 
-        self.tokenizer = auto_tokenizer.from_pretrained(
-            cfg.tokenizer_name_or_path or cfg.model_name_or_path,
-            trust_remote_code=True,
-            use_fast=True,
-        )
+        path = cfg.tokenizer_name_or_path or cfg.model_name_or_path
+        for attempt in range(5):
+            try:
+                self.tokenizer = auto_tokenizer.from_pretrained(
+                    path, trust_remote_code=True, use_fast=True,
+                )
+                break
+            except Exception as e:
+                if attempt == 4:
+                    raise
+                wait = 2 ** attempt * 5
+                print(f"[trainer] tokenizer load failed (attempt {attempt + 1}/5): {e}. Retrying in {wait}s...")
+                time.sleep(wait)
         self.pad_token_id = int(self.tokenizer.pad_token_id or self.tokenizer.eos_token_id or 0)
         model_load_kwargs: dict[str, object] = {}
         if self.torch.cuda.is_available() and not self.distributed_active:
             model_load_kwargs["device_map"] = "auto"
-        self.model = auto_model_for_causal_lm.from_pretrained(
-            cfg.model_name_or_path,
-            trust_remote_code=True,
-            dtype=self.dtype,
-            **model_load_kwargs,
-        )
+
+        for attempt in range(5):
+            try:
+                self.model = auto_model_for_causal_lm.from_pretrained(
+                    cfg.model_name_or_path,
+                    trust_remote_code=True,
+                    dtype=self.dtype,
+                    **model_load_kwargs,
+                )
+                break
+            except Exception as e:
+                if attempt == 4:
+                    raise
+                wait = 2 ** attempt * 5
+                print(f"[trainer] model load failed (attempt {attempt + 1}/5): {e}. Retrying in {wait}s...")
+                time.sleep(wait)
 
     def attach_lora_adapter(self, cfg: TrainerConfig, peft_model, lora_config_cls, task_type, get_peft_model) -> None:
         """Attach a fresh or resumed LoRA adapter to the loaded model."""

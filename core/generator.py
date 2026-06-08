@@ -274,13 +274,26 @@ class TokenizerBackend:
 
     def __init__(self, config: GeneratorConfig) -> None:
         from transformers import AutoTokenizer
+        import time
 
         self.config = config
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            config.tokenizer_name_or_path or config.model_name_or_path,
-            trust_remote_code=True,
-        )
+        path = config.tokenizer_name_or_path or config.model_name_or_path
+        for attempt in range(5):
+            try:
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    path, trust_remote_code=True,
+                )
+                break
+            except Exception as e:
+                if attempt == 4:
+                    raise
+                wait = 2 ** attempt * 5
+                logger.warning(
+                    f"AutoTokenizer.from_pretrained failed (attempt {attempt + 1}/5): {e}. "
+                    f"Retrying in {wait}s..."
+                )
+                time.sleep(wait)
         self.renderer = resolve_renderer(
             config.renderer_name,
             system_prompt=config.renderer_system_prompt,
