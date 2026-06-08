@@ -46,24 +46,11 @@ def build_circle_packing_state_context(
     else:
         value_ctx += "\nNo previous code available."
 
-    if state.parent_values and state.value is not None:
-        before_value = state.parent_values[0] if CIRCLE_PACKING_IS_MAXIMIZE else -state.parent_values[0]
-        after_value = state.value if CIRCLE_PACKING_IS_MAXIMIZE else -state.value
-        current_gap = target - after_value if CIRCLE_PACKING_IS_MAXIMIZE else after_value - target
-        value_ctx += (
-            f"\nHere is the {CIRCLE_PACKING_METRIC_NAME} before and after running the code above "
-            f"({improvement_direction} is better): {before_value:.6f} -> {after_value:.6f}"
-        )
+    if state.value is not None:
+        current_value = state.value if CIRCLE_PACKING_IS_MAXIMIZE else -state.value
+        value_ctx += f"\nCurrent {CIRCLE_PACKING_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         if target > 0:
-            value_ctx += (
-                f"\nTarget: {target}. Current gap: {current_gap:.6f}. "
-                "Further improvements will also be generously rewarded."
-            )
-    elif state.value is not None:
-        after_value = state.value if CIRCLE_PACKING_IS_MAXIMIZE else -state.value
-        value_ctx += f"\nCurrent {CIRCLE_PACKING_METRIC_NAME} ({improvement_direction} is better): {after_value:.6f}"
-        if target > 0:
-            current_gap = target - after_value if CIRCLE_PACKING_IS_MAXIMIZE else after_value - target
+            current_gap = target - current_value if CIRCLE_PACKING_IS_MAXIMIZE else current_value - target
             value_ctx += (
                 f"\nTarget: {target}. Current gap: {current_gap:.6f}. "
                 "Further improvements will also be generously rewarded."
