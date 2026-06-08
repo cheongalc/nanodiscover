@@ -35,7 +35,7 @@ def build_erdos_state_context(
     if state.value is not None:
         current_value = state.value if ERDOS_IS_MAXIMIZE else -state.value
         current_gap = ERDOS_TARGET - current_value if ERDOS_IS_MAXIMIZE else current_value - ERDOS_TARGET
-        value_ctx += f"\nCurrent best {ERDOS_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
+        value_ctx += f"\nCurrent {ERDOS_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         value_ctx += (
             f"\nTarget: {ERDOS_TARGET}. Current gap: {current_gap:.6f}. "
             "Further improvements will also be generously rewarded."

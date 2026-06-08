@@ -176,7 +176,7 @@ def build_ac1_state_context(
     if state.value is not None:
         current_value = state.value if AC1_IS_MAXIMIZE else -state.value
         current_gap = AC1_TARGET - current_value if AC1_IS_MAXIMIZE else current_value - AC1_TARGET
-        value_ctx += f"\nCurrent best {AC1_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
+        value_ctx += f"\nCurrent {AC1_METRIC_NAME} ({improvement_direction} is better): {current_value:.6f}"
         value_ctx += (
             f"\nTarget: {AC1_TARGET}. Current gap: {current_gap:.6f}. "
             "Further improvements will also be generously rewarded."
