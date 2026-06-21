@@ -50,6 +50,12 @@ def validate_packing(centers, radii):
     """
     n = centers.shape[0]
 
+    # Solutions must be real-valued; complex coords/radii would slip past the NaN/range
+    # checks below (numpy compares real parts) and then crash JSON serialization. Reject.
+    if np.iscomplexobj(centers) or np.iscomplexobj(radii):
+        print("complex values detected in circle centers/radii")
+        return False
+
     # Check for NaN values
     if np.isnan(centers).any():
         print("NaN values detected in circle centers")
