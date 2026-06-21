@@ -69,6 +69,73 @@ def write_json_payload(path: Path, payload: dict[str, Any]) -> None:
     )
 
 
+def json_serializable(value: Any) -> bool:
+    """Return True if ``value`` can be JSON-encoded (with the numpy coercions)."""
+
+    try:
+        json.dumps(value, default=json_default_for_numpy)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def downgrade_unserializable_rollout(rollout_dict: dict[str, Any], *, reason: str) -> dict[str, Any]:
+    """Return a guaranteed-serializable correctness-0 version of a rollout dict.
+
+    Used when a rollout's evaluation output cannot be JSON-encoded (e.g. a candidate returned
+    complex/exotic values that slipped past the task validity check). That is a candidate/spec
+    failure, not infra, so the rollout is recorded as a *failed eval* (correctness 0) and the
+    shard is still written -- so it is NOT re-dispatched. Infra failures never reach here; they
+    stop the shard from being produced at all and are handled as gaps by the launcher.
+
+    Identity/debug fields are preserved only when they themselves serialize; all result-bearing
+    fields are zeroed/cleared so the output is guaranteed encodable.
+    """
+
+    safe: dict[str, Any] = {
+        "correctness": 0.0,
+        "reward": 0.0,
+        "performance": 0.0,
+        "raw_score": None,
+        "archive_value": None,
+        "next_state": None,
+        "result_payload": {},
+        "msg": reason,
+    }
+    for key in (
+        "seed_state", "prompt_text", "response_text",
+        "prompt_token_ids", "completion_token_ids",
+        "completion_logprobs", "completion_mask",
+        "finish_reason", "parsed_code", "stdout",
+    ):
+        if key in rollout_dict and json_serializable(rollout_dict[key]):
+            safe[key] = rollout_dict[key]
+    return safe
+
+
+def write_shard_payload_resilient(path: Path, payload: dict[str, Any]) -> None:
+    """Write a shard payload, downgrading any unserializable rollout to a failed eval.
+
+    Clean serialization is the common path. If it fails, the offending rollout(s) carried
+    output that cannot be represented (a candidate/spec violation) -> rewrite just those items
+    as correctness-0 failed evals and write successfully, so the shard lands (no gap, no retry).
+    """
+
+    try:
+        write_json_payload(path, payload)
+        return
+    except (TypeError, ValueError) as exc:
+        reason = f"unserializable evaluation output (recorded as failed eval): {exc}"
+        logger.warning("shard serialization failed (%s); downgrading unserializable rollouts", exc)
+    for item in payload.get("items", []):
+        if json_serializable(item):
+            continue
+        roll = item.get("rollout") if isinstance(item.get("rollout"), dict) else {}
+        item["rollout"] = downgrade_unserializable_rollout(roll, reason=reason)
+        logger.warning("shard index=%s downgraded to failed eval (unserializable output)", item.get("index"))
+    write_json_payload(path, payload)
+
+
 def update_best_raw_score(
     best_raw_score: float | None,
     raw_score: float,
@@ -837,7 +904,7 @@ def evaluate_external_shard(
     shard_stop = min(len(generations), int(stop))
     if shard_stop <= shard_start:
         payload = {"epoch": int(epoch), "items": []}
-        write_json_payload(resolved_output_path, payload)
+        write_shard_payload_resilient(resolved_output_path, payload)
         return payload
 
     evaluator = Evaluator(
@@ -860,7 +927,7 @@ def evaluate_external_shard(
         start_index=shard_start,
         evaluated=evaluated,
     )
-    write_json_payload(resolved_output_path, payload)
+    write_shard_payload_resilient(resolved_output_path, payload)
     logger.info(
         "external_eval_complete epoch=%d evaluated=%d output=%s elapsed_s=%.3f",
         int(epoch),
