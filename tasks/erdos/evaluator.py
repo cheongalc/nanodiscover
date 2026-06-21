@@ -38,6 +38,14 @@ def verify_c5_solution(h_values: np.ndarray, c5_achieved: float, n_points: int):
     if h_values.shape[0] != n_points:
         raise ValueError(f"Expected h shape ({n_points},), got {h_values.shape}")
 
+    # h: [0, 2] -> [0, 1] is real-valued. A complex array would skip the float64 cast above
+    # (it is already an ndarray), pass the range checks via numpy's real-part comparison, and
+    # silently lose its imaginary part at float(np.complex128(...)) -- leaving complex values
+    # in the returned construction. A complex h violates the task spec, so reject it here as an
+    # invalid solution.
+    if np.iscomplexobj(h_values):
+        raise ValueError("h_values must be real-valued; got complex values (h(x) must lie in [0, 1])")
+
     if not np.all(np.isfinite(h_values)):
         raise ValueError("h_values contain NaN or inf values")
 
